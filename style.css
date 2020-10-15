@@ -1,5 +1,7 @@
-body {
+* {
   margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .container {
@@ -8,7 +10,7 @@ body {
   position: relative;
 }
 
-.remoteCamerasContainer {
+.draggableElement {
   list-style: none;
   position: absolute;
   bottom: 0;
@@ -20,7 +22,7 @@ body {
   cursor: move;
 }
 
-.remoteCamerasContainer > li {
+.draggableElement > li {
   margin: 0.2rem;
   padding: 1rem;
   background-color: #fff;
@@ -38,7 +40,6 @@ body {
   border-radius: 50px;
   padding: 7px 8px;
   cursor: pointer;
-  margin: 4px 2px;
 }
 
 .img-btn:hover {

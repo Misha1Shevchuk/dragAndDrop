@@ -1,13 +1,12 @@
-const container = document.querySelector('.container');
-const draggableElement = document.querySelector('.remoteCamerasContainer');
-const showCamerasBtn = document.querySelector('#showRemoteCameras');
-
-const ARROW_DIRECTION = { top: 0, right: 0.25, bottom: 0.5, left: 0.75 };
 const LEFT = 'left', TOP = 'top', RIGHT = 'right', BOTTOM = 'bottom';
-const outsideDirection = [];
+
+const container = document.querySelector('.container');
+const draggableElement = document.querySelector('.draggableElement');
+const showDraggableBtn = document.querySelector('#showDraggableBtn');
 
 draggableElement.addEventListener('dragstart', event => {
     const style = window.getComputedStyle(event.target);
+
     const position = JSON.stringify({
         left: parseInt(style.getPropertyValue("left")) - event.clientX,
         top: parseInt(style.getPropertyValue("top")) - event.clientY
@@ -15,86 +14,79 @@ draggableElement.addEventListener('dragstart', event => {
     event.dataTransfer.setData("Position", position);
 });
 
-container.addEventListener('dragover', e => e.preventDefault());
+container.addEventListener('dragover', event => event.preventDefault());
 
 container.addEventListener('drop', event => {
     event.preventDefault();
+
     const position = JSON.parse(event.dataTransfer.getData("Position"));
     let left = event.clientX + parseInt(position.left, 10);
     let top = event.clientY + parseInt(position.top, 10);
 
-    outsideDirection.clear();
+    const isOutsideLeft = left < 0;
+    const isOutsideTop = top < 0;
+    const isOutsideRight = left + draggableElement.offsetWidth > container.offsetWidth;
+    const isOutsideBottom = top + draggableElement.offsetHeight > container.offsetHeight;
 
-    if (left + draggableElement.offsetWidth > container.offsetWidth) {
-        outsideDirection.push(RIGHT);
+    let outsideDirection;
 
-        const buttonWidth = parseInt(window.getComputedStyle(showCamerasBtn).getPropertyValue('width'), 10);
-        left = container.offsetWidth - buttonWidth - 4;
-        top = event.clientY;
-    }
+    if (isOutsideLeft) outsideDirection = LEFT;
+    if (isOutsideRight) outsideDirection = RIGHT;
+    if (isOutsideTop) outsideDirection = TOP;
+    if (isOutsideBottom) outsideDirection = BOTTOM;
 
-    if (top + draggableElement.offsetHeight > container.offsetHeight) {
-        outsideDirection.push(BOTTOM);
+    if (isOutsideRight || isOutsideLeft) top = event.clientY;
+    if (isOutsideTop || isOutsideBottom) left = event.clientX;
 
-        const buttonHeight = parseInt(window.getComputedStyle(showCamerasBtn).getPropertyValue('height'), 10);
-        top = container.offsetHeight - buttonHeight - 4;
-        left = event.clientX;
-    }
-
-    if (left < 0) {
-        outsideDirection.push(LEFT);
-
-        top = event.clientY;
-        left = 0;
-    }
-
-    if (top < 0) {
-        outsideDirection.push(TOP);
-
-        left = event.clientX;
-        top = 0;
-    }
-
-    if (outsideDirection.length > 0) {
-        createButton(left, top, outsideDirection);
+    if (outsideDirection) {
+        showButtonToDisplayDraggableElement(getButtonPosition(left, top, outsideDirection));
         draggableElement.classList.add('display-none');
     } else {
-        showCamerasBtn.classList.add('display-none');
-        draggableElement.style.left = left + 'px';
-        draggableElement.style.top = top + 'px';
+        showDraggableBtn.classList.add('display-none');
+        draggableElement.style.left = `${left}px`;
+        draggableElement.style.top = `${top}px`;
     }
 });
 
-function createButton(left, top, arrowDirection) {
-    showCamerasBtn.classList.remove('display-none');
-    showCamerasBtn.setAttribute('onclick', `showRemoteCameras(${left}, ${top})`);
-    showCamerasBtn.style.cssText = `
-            position: absolute;
-            left: ${left}px;
-            top: ${top}px;
-            transform: rotate(${ARROW_DIRECTION[outsideDirection[outsideDirection.length - 1]]}turn);
-        `;
+function getButtonPosition(left, top, outsideDirection) {
+    const buttonWidth = parseInt(window.getComputedStyle(showDraggableBtn).getPropertyValue('width'), 10);
+    const buttonHeight = parseInt(window.getComputedStyle(showDraggableBtn).getPropertyValue('height'), 10);
+
+    left -= buttonWidth / 2;
+    top -= buttonHeight / 2;
+
+    if (outsideDirection === TOP) top = 0;
+    else if (outsideDirection === LEFT) left = 0;
+    else if (outsideDirection === BOTTOM) top = container.offsetHeight - buttonHeight;
+    else if (outsideDirection === RIGHT) left = container.offsetWidth - buttonWidth;
+
+    return { left, top, outsideDirection };
 }
 
-function showRemoteCameras(left, top) {
-    showCamerasBtn.classList.add('display-none');
+function showButtonToDisplayDraggableElement({ left, top, outsideDirection }) {
+    const arrowDirection = ({ top: 0, right: 0.25, bottom: 0.5, left: 0.75 })[outsideDirection];
+
+    showDraggableBtn.classList.remove('display-none');
+    showDraggableBtn.setAttribute('onclick', `showDraggableElement(${left}, ${top})`);
+    showDraggableBtn.style.cssText = `position: absolute;
+                                      left: ${left}px;
+                                      top: ${top}px;
+                                      transform: rotate(${arrowDirection}turn);`;
+}
+
+function showDraggableElement(left, top) {
+    showDraggableBtn.classList.add('display-none');
     draggableElement.classList.remove('display-none');
+
+    const maxLeftPosition = container.offsetWidth - draggableElement.offsetWidth;
+    const maxTopPosition = container.offsetHeight - draggableElement.offsetHeight;
+    const minLeftPosition = 0, minTopPosition = 0;
 
     left -= draggableElement.offsetWidth / 2;
     top -= draggableElement.offsetHeight / 2;
-    if (left < 0) left = 0;
-    if (top < 0) top = 0;
 
-    if (outsideDirection.includes(RIGHT)) {
-        left = container.offsetWidth - draggableElement.offsetWidth;
-    }
-    if (outsideDirection.includes(BOTTOM)) {
-        top = container.offsetHeight - draggableElement.offsetHeight;
-    }
+    left = Math.min(maxLeftPosition, Math.max(minLeftPosition, left));
+    top = Math.min(maxTopPosition, Math.max(minTopPosition, top));
 
-    document.querySelector('#remoteCamerasContainer').style.cssText = `left: ${left}px; top: ${top}px;`;
-}
-
-Array.prototype.clear = function {
-    while (this.length) this.pop();
+    draggableElement.style.cssText = `left: ${left}px; top: ${top}px;`;
 }
